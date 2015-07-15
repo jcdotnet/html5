@@ -78,6 +78,7 @@ $(function () {
     // set handlers to events
     window.addEventListener("keydown", handleKeydown, false)
     window.addEventListener("keyup", handleKeyup, false)
+    window.addEventListener("resize", handleResize);
 
     // start the game
     startGame();
@@ -109,6 +110,13 @@ function handleKeydown (event)
 
 function handleKeyup(event) {
         velX = 0
+}
+
+function handleResize()
+{
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+    wallBottom = canvas.height - 100
 }
 
 /////////////////////// helper functions ///////////////////////////
