@@ -32,20 +32,20 @@ var PATTERN3 = [0, 250, 500]
 var PATTERN4 = [0, 100, 400, 500] 
 var PATTERN5 = [0, 80] 
 var PATTERN6 = [0, 240] 
-var PATTERN7 = [0, 400] 
+var PATTERN7 = [0, 400]
+var PATTERN8 = [0, 80, 160, 240, 320]
 
 // canvas
 var canvas, ctx, mouse = true
 
 // animation
-
 var startTime, elapsedTime
-var idAnimation, idMeteors
-var playing
+var idAnimation, idMeteors, idGoodOnes
 var direction = "down"
 var posX, posY
 var velX, velY
 var rotationAngle = 0
+var hsv = {h: 0, s: 1, v: 1}
 
 
 // game dimensions
@@ -54,10 +54,12 @@ var wallBottom
 
 // game elements
 
-var holes // TO DO
+var stars = []
 var meteors
-var balls // TO DO
+var goodOnes
 
+// game control
+var playing
 
 /////////////// events handlers /////////////////////////
 
@@ -142,7 +144,7 @@ function intersects(x1, y1, width1, height1, x2, y2, width2, height2) {
 
 function isInside(x1, y1, width1, height1, containerX, containerY, width, height) {
     // check this 
-    return x1 >= containerX && y1 >= containerY && x1 + width1 <= width && y1 + height1 <= height
+    return x1 >= containerX && x1 + y1 >= containerY && x1 + width1 <= width && y1 + height1 <= height
 }
 
 // returns an integer between min and max (both inclusive)
@@ -150,12 +152,42 @@ function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// gets a random y coordinate that assures that all the meteors in a pattern are inside the game area
+// gets a random y coordinate that assures that all the meteors in the pattern passed are inside the game area
 function getRandomY(pattern) {
     var max = Math.max.apply(null, pattern)    
     return getRandomInt(WALL_TOP + 1, wallBottom - METEOR_SIZE - max)//;wallBottom - METEOR_SIZE)
 }
 
+// converts a color component from decimal to hexadecimal
+function toHex(color) {
+    var hex = color.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+}
+
+function HSVtoRGB(h, s, v) {
+    if (arguments.length === 1) { // if passing an object instead 
+        s = h.s, v = h.v, h = h.h;
+    }
+    var r, g, b, i, f, p, q, t;
+    i = Math.floor(h * 6);
+    f = h * 6 - i;
+    p = v * (1 - s);
+    q = v * (1 - f * s);
+    t = v * (1 - (1 - f) * s);
+    switch (i % 6) {
+        case 0: r = v, g = t, b = p; break;
+        case 1: r = q, g = v, b = p; break;
+        case 2: r = p, g = v, b = t; break;
+        case 3: r = p, g = q, b = v; break;
+        case 4: r = t, g = p, b = v; break;
+        case 5: r = v, g = p, b = q; break;
+    }
+    return {
+        r: Math.round(r * 255),
+        g: Math.round(g * 255),
+        b: Math.round(b * 255)
+    };
+}
 
 /////////////// game functions /////////////////////
 
@@ -174,10 +206,11 @@ function startGame() {
 
     // initialize game elements
     meteors = []
+    goodOnes = []
 
     // set time out for game elements
     setTimeout(spawnMeteors, 500)
-    // setTimeout(spawnGoodOnes, getRandomInt(20000, 60000))
+    idGoodOnes = setTimeout(spawnGoodOnes, getRandomInt(10000, 60000))
 
     // start game loop
     requestAnimationFrame(gameLoop);
@@ -187,6 +220,7 @@ function stopGame() {
     if (idAnimation) {
         cancelAnimationFrame(idAnimation);
         clearTimeout(idMeteors);
+        clearTimeout(idGoodOnes);
         if (localStorage.bestTime == undefined || elapsedTime > localStorage.bestTime) localStorage.bestTime = elapsedTime
         // TO DO: END GAME SOUND
         setTimeout(startGame, 3000)
@@ -222,7 +256,7 @@ function spawnPattern(pattern, patternIndex, direction) {
 
     if (getRandomInt(1, 2) == 1) {
         direction = direction == 1 ? 2 : 1
-        offsetX = patternIndex < 8 ? 0 : 300
+        offsetX = patternIndex < 9 ? 0 : 300
 
         for (var i = 0; i < meteorsCount; i++) {
             if (patternIndex == 2 && (i == 2 || i == 3))
@@ -233,11 +267,11 @@ function spawnPattern(pattern, patternIndex, direction) {
                 offsetX = (-1) * i * (METEOR_SIZE + METEOR_SIZE / 4)
             else if (patternIndex == 4)
                 offsetX = (-1) * i * (METEOR_SIZE + METEOR_SIZE / 2)
-            else if (patternIndex > 7)
+            else if (patternIndex >= 9)
                 offsetX -= 300
             else offsetX = 0
 
-            var meteorY = patternIndex < 8 ? randomY + pattern[i] : getRandomInt(WALL_TOP, wallBottom - METEOR_SIZE)
+            var meteorY = patternIndex < 9 ? randomY + pattern[i] : getRandomInt(WALL_TOP, wallBottom - METEOR_SIZE)
 
             meteors.push({ x: direction == 1 ? offsetX : canvas.width - offsetX, y: meteorY , velX: direction == 1 ? 10 : -10, size: METEOR_SIZE })
         }
@@ -249,7 +283,7 @@ function spawnMeteors() {
     var randomDirection = getRandomInt(1, 2) // 1 == meteors go rightwards, 2 == meteors go leftwards
 
     // spawn sprites
-    var curPattern = getRandomInt(1, 10) 
+    var curPattern = getRandomInt(1, 11) 
     switch (curPattern) {
         case 1:
             spawnPattern(PATTERN1, curPattern, randomDirection)           
@@ -273,8 +307,11 @@ function spawnMeteors() {
             spawnPattern(PATTERN7, curPattern, randomDirection)
             break;
         case 8:
+            spawnPattern(PATTERN8, curPattern, randomDirection)
+            break;
         case 9: 
         case 10:
+        case 11:
             spawnPattern(null, curPattern, randomDirection)        
             break;
     }
@@ -284,20 +321,20 @@ function spawnMeteors() {
 }
 
 function spawnGoodOnes() {
-    /*
-     * HOLES:
-     * will be implemented as circles, protects if you are inside (use isInside function) during X secs, starts to flick when is going to dissapear 
-     *
-     * BALLS:
-     * 1) al colisionar con ellas salen disparadas y destruyen los meteoritos que se encuentran a su paso, para ver la velocidad tras colisión mirar mi proyecto XNA
-     * 2) o destruye todos los meteoritos
-     * o según el color hace 1) o 2)
-     *
-     * goodOnes will be spawned every [20sec - 1min]
-     *
-     *    
-      setTimeout(spawnGoodOnes, getRandomInt(20000, 60000))
-    */
+
+    var randomX = getRandomInt(0, canvas.width - METEOR_SIZE)
+    var randomY = getRandomInt(WALL_TOP + 1, wallBottom - METEOR_SIZE)
+    goodOnes.push({ x: randomX, y: randomY, size: METEOR_SIZE })
+    
+    idGoodOnes = setTimeout(spawnGoodOnes, getRandomInt(10000, 60000))    
+}
+
+function spawnStar() 
+{
+    var velX = Math.random() * 2 + 0.1 
+    var velY = Math.random() * 2 + 0.1
+    stars.push({ x: canvas.width / 2, y: canvas.height / 2, size: 1, velX: getRandomInt(1, 2) == 1 ? velX : (-1) * velX, velY: getRandomInt(1, 2) == 1 ? velY : (-1) * velY })
+    //console.log(stars.length)
 }
 
 function gameLoop(timestamp) 
@@ -306,6 +343,7 @@ function gameLoop(timestamp)
     elapsedTime += timestamp - startTime
   
     startTime = timestamp;
+
 
     clear()
     update(timestamp)
@@ -318,25 +356,35 @@ function gameLoop(timestamp)
 }
 
 
-function checkCollisions()
-{
+function checkCollisions() {
     // resolve wall collisions
-    if (posX < 0)
-    {
+    if (posX < 0) {
         posX = canvas.width - 40 // Math.abs(posX)
     }
-    else if (canvas.width - posX < 40)
-    {
+    else if (canvas.width - posX < 40) {
         posX = 0
     }
-    // collision with meteors 
+
+    // collision with good ones (FIRST)
+    for (i = goodOnes.length - 1; i >= 0 ; i--) {
+        if (intersects(posX, posY, SPRITE_WIDTH, SPRITE_HEIGHT, goodOnes[i].x, goodOnes[i].y, goodOnes[i].size, goodOnes[i].size)) {
+            goodOnes.splice(i, 1)
+            meteors.length = 0 // meteors = [] // TO DO: EXPLOSION SPRITES AND EXPLOSION SOUND
+            clearTimeout(idMeteors);
+            idMeteors = setTimeout(spawnMeteors, 500) // spawnMeteors()
+        }
+    }
+
+    // collision with meteors (then)
     for (i = 0; i < meteors.length; i++) {
         if (intersects(posX, posY, SPRITE_WIDTH, SPRITE_HEIGHT, meteors[i].x, meteors[i].y, meteors[i].size, meteors[i].size)) {
             //console.log("oops")
             playing = false
         }
     }
+    
 }
+
 function getVelY()
 {
     if (direction == "down" && posY + SPRITE_HEIGHT > wallBottom)
@@ -378,23 +426,34 @@ function update()
     posX += velX
     posY += getVelY()
 
+    spawnStar()
+
     for (var i = meteors.length - 1; i >= 0; i--) {       
         meteors[i].x += meteors[i].velX 
         if (meteors[i].velX < 0 && meteors[i].x < 0 || meteors[i].velX > 0 && meteors[i].x > canvas.width) 
             meteors.splice(i, 1)    // remove meteor from array if it is no longer in the game screen
     }
 
+    for (var i = stars.length - 1; i >= 0; i--) {
+        stars[i].x += stars[i].velX
+        stars[i].y += stars[i].velY
+        if (stars[i].x < 0 || stars[i].x > canvas.width || stars[i].y < 0 || stars[i].y > canvas.height) {
+            stars.splice(i, 1)    // remove star from array if it is no longer in the game screen
+        }
+    }
+
     checkCollisions()
 
 }
 
+
+
 function draw()
 {
-    rotationAngle = (rotationAngle + 1) % 180
+    var color = HSVtoRGB(hsv)
 
     // draws background
     ctx.save()
-
     ctx.fillStyle = "black"
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.restore()
@@ -405,7 +464,7 @@ function draw()
     ctx.fillRect(0, wallBottom, canvas.width, WALL_HEIGHT);
     
 
-    // draws sprite 
+    // draws main sprite 
     ctx.fillRect(posX, posY, SPRITE_WIDTH, SPRITE_HEIGHT);
 
     ctx.save()
@@ -418,8 +477,8 @@ function draw()
     
     
     // draws meteors 
-    // TO DO: change the color and the background as I did in my Android mid project
-    ctx.strokeStyle = "red" 
+    ctx.strokeStyle = '#' + toHex(color.r) + toHex(color.g) + toHex(color.b)
+
     for (var i = 0; i < meteors.length; i++) {
         ctx.save()
         ctx.translate(meteors[i].x + meteors[i].size / 2, meteors[i].y + meteors[i].size / 2);
@@ -427,7 +486,26 @@ function draw()
         ctx.strokeRect((-1) * meteors[i].size / 2, (-1) * meteors[i].size / 2, meteors[i].size, meteors[i].size)
         ctx.restore()      
     }
-    
+
+    // draws good ones
+    for (var i = 0; i < goodOnes.length; i++) {
+        ctx.save()
+        ctx.translate(goodOnes[i].x + goodOnes[i].size / 2, goodOnes[i].y + goodOnes[i].size / 2);
+        ctx.rotate(rotationAngle * Math.PI / 180);
+        ctx.fillStyle = '#' + toHex(color.r) + toHex(color.g) + toHex(color.b)
+        ctx.fillRect((-1) * goodOnes[i].size / 2, (-1) * goodOnes[i].size / 2, goodOnes[i].size, goodOnes[i].size)        
+        ctx.restore()
+    }
+
+    // draw stars
+    for (var i = 0; i < stars.length; i++) {
+        ctx.save()
+        ctx.fillStyle = '#' + toHex(color.r) + toHex(color.g) + toHex(color.b)
+        ctx.fillRect(stars[i].x, stars[i].y, stars[i].size, stars[i].size)
+        ctx.restore()
+        
+
+    }
     // draws counters 
     ctx.font = "70px sans serif";
     ctx.fillText("Current time: " + toTime(elapsedTime), canvas.width / 10, 62);
@@ -436,4 +514,11 @@ function draw()
     // draws messages
     ctx.font = "40px sans serif";
     ctx.fillText("Use the left and right arrow keys to play -- press space to hide or show the mouse cursor, ENJOY!", canvas.width / 12, wallBottom + 70);
+
+    // changes color
+    hsv.h += 0.00033
+    //console.log(hsv)
+    
+    // changes rotation angle
+    rotationAngle = (rotationAngle + 1) % 180
 }
