@@ -5,7 +5,7 @@ just testing the new HTML5 elements!
 Snake game:  
 http://snakeontour.hol.es/    
 
-Yet another granitron game:  
+Yet another gravitron game:  
 http://gravitron.hol.es/  
 
 Emoticonia game:  
