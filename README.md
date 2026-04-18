@@ -1,12 +1,5 @@
-# html5
+# HTML5 Experiments (2015)
 
-just testing the new HTML5 elements!  
+⚠️ **ARCHIVED:** This repository is no longer maintained and has been moved to my centralized [javascript-lab]([https://github.com](https://github.com/jcdotnet/javascript-lab/tree/main/legacy/html5-apis)) for better organization.
 
-Snake game:  
-http://snakeontour.hol.es/    
-
-Yet another gravitron game:  
-http://gravitron.hol.es/  
-
-Emoticonia game:  
-http://emoticonia.hol.es/  
+This was a collection of exercises and simple games (Snake, Gravitron, Emoticonia) developed as a technical exploration of Web APIs.
